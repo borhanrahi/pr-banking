@@ -1,7 +1,11 @@
-import React from "react";
+import React from 'react'
 
-const PaymentTransfer = () => {
-  return <div>PaymentTransfer</div>;
-};
+const page = () => {
+  return (
+    <div>
+      Payment Transfer
+    </div>
+  )
+}
 
-export default PaymentTransfer;
+export default page

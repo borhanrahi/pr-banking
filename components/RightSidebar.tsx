@@ -1,11 +1,48 @@
+"use client";
+
 import Image from "next/image";
-import Link from "next/link";
 import BankCard from "./BankCard";
+import { useEffect, useState } from "react";
+import { createLinkToken, exchangePublicToken } from "@/lib/actions/user.actions";
+import { useRouter } from "next/navigation";
+import ConnectBankModal from "./ConnectBankModal";
 
 const RightSidebar = ({ user, transactions, banks }: RightSidebarProps) => {
+  const router = useRouter();
+  const [linkToken, setLinkToken] = useState("");
+
+  useEffect(() => {
+    const getLinkToken = async () => {
+      try {
+        const data = await createLinkToken(user);
+        if (data?.linkToken) {
+          setLinkToken(data.linkToken);
+        } else {
+          console.error("Failed to get link token");
+        }
+      } catch (error) {
+        console.error("Error getting link token:", error);
+      }
+    };
+
+    getLinkToken();
+  }, [user]);
+
+  const onSuccess = async (public_token: string) => {
+    try {
+      await exchangePublicToken({
+        publicToken: public_token,
+        user,
+      });
+      router.refresh();
+    } catch (error) {
+      console.error("Error exchanging public token:", error);
+    }
+  };
+
   return (
     <aside className='right-sidebar'>
-      <section className='flex flex-col pb=8'>
+      <section className='flex flex-col pb-8'>
         <div className='profile-banner' />
         <div className='profile'>
           <div className='profile-img'>
@@ -22,44 +59,26 @@ const RightSidebar = ({ user, transactions, banks }: RightSidebarProps) => {
         </div>
       </section>
       <section className='banks'>
-        <div className='flex w-full justify-between'>
+        <div className='flex w-full justify-between mb-4'>
           <h2 className='header-2'>My Balance</h2>
-          <Link
-            href='/'
-            className='flex gap-2'
-          >
-            <Image
-              src='/icons/plus.svg'
-              width={20}
-              height={20}
-              alt='plus'
-            />
-            <h2 className='text-14 font-semibold'>Add banks</h2>
-          </Link>
+          <ConnectBankModal linkToken={linkToken} onSuccess={onSuccess} />
         </div>
 
-        {banks?.length > 0 && (
-          <div className='relative flex flex-1 flex-col items-center justify-center gap-5'>
-            <div className='relative z-10'>
-              <BankCard
-                key={banks[0].$id}
-                account={banks[0]}
-                userName={`${user.firstName} ${user.lastName}`}
-                showBalance={false}
-              />
-            </div>
-            {banks[1] && (
-              <div className='absolute z-0 right-0 top-8 w-[90%]'>
+        <div className='relative flex flex-col gap-4'>
+          {banks && banks.length > 0 ? (
+            banks.map((bank, index) => (
+              <div key={bank.$id} className={`relative ${index > 0 ? 'mt-[-60px]' : ''}`}>
                 <BankCard
-                  key={banks[1].$id}
-                  account={banks[1]}
+                  account={bank}
                   userName={`${user.firstName} ${user.lastName}`}
                   showBalance={false}
                 />
               </div>
-            )}
-          </div>
-        )}
+            ))
+          ) : (
+            <p>No banks connected yet.</p>
+          )}
+        </div>
       </section>
     </aside>
   );

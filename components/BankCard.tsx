@@ -1,18 +1,18 @@
-import { formatAmount } from "@/lib/utils";
-import Image from "next/image";
-import Link from "next/link";
-import React from "react";
+import React from 'react';
+import Link from 'next/link';
+import Image from 'next/image';
+import { formatAmount } from '@/lib/utils';
 
-const BankCard = ({
-  account,
-  userName,
-  showBalance = true,
-}: CreditCardProps) => {
-  console.log(account);
+interface BankCardProps {
+  account: any;
+  userName: string;
+}
+
+const BankCard: React.FC<BankCardProps> = ({ account, userName }) => {
   return (
     <div className='flex flex-col'>
       <Link
-        href={`/transaction-history/?id=${account.appwriteItemId}`}
+        href={`/transaction-history/?id=${account.$id}`}
         className='bank-card'
       >
         <div className='bank-card_content'>
@@ -21,7 +21,7 @@ const BankCard = ({
               {account.name || userName}
             </h1>
             <p className='font-ibm-plex-serif font-black text-white'>
-              {formatAmount(account.currentBalance)}
+              {formatAmount(account.balances?.current || 0)}
             </p>
           </div>
 
@@ -31,7 +31,7 @@ const BankCard = ({
               <h2 className='text-12 font-semibold text-white'>●● / ●●</h2>
             </div>
             <p className='text-14 font-semibold tracking-[1.1px] text-white'>
-              ●●●● ●●●● ●●●● <span className='text-16'>{account?.mask}</span>
+              ●●●● ●●●● ●●●● <span className='text-16'>{account.mask}</span>
             </p>
           </article>
         </div>

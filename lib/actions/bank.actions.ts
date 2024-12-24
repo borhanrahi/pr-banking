@@ -21,6 +21,8 @@ export const getAccounts = async ({ userId }: getAccountsProps) => {
     // get banks from db
     const banks = await getBanks({ userId });
 
+    console.log('Retrieved banks from DB:', banks);
+
     const accounts = await Promise.all(
       banks?.map(async (bank: Bank) => {
         // get each account info from plaid
@@ -28,6 +30,8 @@ export const getAccounts = async ({ userId }: getAccountsProps) => {
           access_token: bank.accessToken,
         });
         const accountData = accountsResponse.data.accounts[0];
+
+        console.log('Retrieved account data from Plaid:', accountData);
 
         // get institution info from plaid
         const institution = await getInstitution({
@@ -56,6 +60,10 @@ export const getAccounts = async ({ userId }: getAccountsProps) => {
     const totalCurrentBalance = accounts.reduce((total, account) => {
       return total + account.currentBalance;
     }, 0);
+
+    console.log('Processed accounts:', accounts);
+    console.log('Total banks:', totalBanks);
+    console.log('Total current balance:', totalCurrentBalance);
 
     return parseStringify({ data: accounts, totalBanks, totalCurrentBalance });
   } catch (error) {
@@ -115,9 +123,12 @@ export const getAccount = async ({ appwriteItemId }: getAccountProps) => {
     };
 
     // sort transactions by date such that the most recent transaction is first
-      const allTransactions = [...transactions, ...transferTransactions].sort(
+    const allTransactions = [...transactions, ...transferTransactions].sort(
       (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
     );
+
+    console.log('Retrieved account:', account);
+    console.log('All transactions:', allTransactions);
 
     return parseStringify({
       data: account,
@@ -140,9 +151,11 @@ export const getInstitution = async ({
 
     const intitution = institutionResponse.data.institution;
 
+    console.log('Retrieved institution:', intitution);
+
     return parseStringify(intitution);
   } catch (error) {
-    console.error("An error occurred while getting the accounts:", error);
+    console.error("An error occurred while getting the institution:", error);
   }
 };
 
@@ -178,8 +191,31 @@ export const getTransactions = async ({
       hasMore = data.has_more;
     }
 
+    console.log('Retrieved transactions:', transactions);
+
     return parseStringify(transactions);
   } catch (error) {
-    console.error("An error occurred while getting the accounts:", error);
+    console.error("An error occurred while getting the transactions:", error);
   }
 };
+
+// Export the functions needed in page.tsx
+export { getBanks };
+
+export const getAllTransactions = async ({ userId }: { userId: string }) => {
+  const banks = await getBanks({ userId });
+  let allTransactions: any[] = [];
+
+  for (const bank of banks) {
+    const transactions = await getTransactions({ accessToken: bank.accessToken });
+    allTransactions = [...allTransactions, ...transactions];
+  }
+
+  // Sort transactions by date (most recent first)
+  allTransactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  console.log('All transactions for user:', allTransactions);
+
+  return allTransactions;
+};
+
