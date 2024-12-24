@@ -17,7 +17,7 @@ const {
 } = process.env;
 
 interface User {
-  userId: string;
+  $id: string;
   email: string;
   firstName: string;
   lastName: string;
@@ -50,14 +50,14 @@ interface ExchangePublicTokenProps {
   user: User;
 }
 
-export const getUserInfo = async ({ userId }: GetUserInfoProps) => {
+export async function getUserInfo({ userId }: GetUserInfoProps) {
   try {
     const { database } = await createAdminClient();
 
     const user = await database.listDocuments(
       APPWRITE_DATABASE_ID!,
       APPWRITE_USER_COLLECTION_ID!,
-      [Query.equal('userId', [userId])]
+      [Query.equal('$id', [userId])]
     );
 
     if (user.documents.length === 0) {
@@ -70,9 +70,9 @@ export const getUserInfo = async ({ userId }: GetUserInfoProps) => {
     console.error('Error in getUserInfo:', error);
     return null;
   }
-};
+}
 
-export const getLoggedInUser = async () => {
+export async function getLoggedInUser() {
   try {
     const { account } = await createSessionClient();
     const result = await account.get();
@@ -80,7 +80,8 @@ export const getLoggedInUser = async () => {
 
     if (!user) {
       // Clear session and redirect to sign-in
-      cookies().delete('appwrite-session');
+      const cookieStore = cookies();
+      cookieStore.delete('appwrite-session');
       redirect('/sign-in?error=no_user');
     }
 
@@ -89,9 +90,9 @@ export const getLoggedInUser = async () => {
     console.error('Error in getLoggedInUser:', error);
     return null;
   }
-};
+}
 
-export const signUp = async ({ email, password, firstName, lastName }: SignUpProps) => {
+export async function signUp({ email, password, firstName, lastName }: SignUpProps) {
   try {
     const { account, database } = await createAdminClient();
 
@@ -121,7 +122,6 @@ export const signUp = async ({ email, password, firstName, lastName }: SignUpPro
       APPWRITE_USER_COLLECTION_ID!,
       newUser.$id,
       {
-        userId: newUser.$id,
         email,
         firstName,
         lastName,
@@ -131,7 +131,8 @@ export const signUp = async ({ email, password, firstName, lastName }: SignUpPro
 
     const session = await account.createEmailPasswordSession(email, password);
 
-    cookies().set("appwrite-session", session.secret, {
+    const cookieStore = cookies();
+    cookieStore.set("appwrite-session", session.secret, {
       path: "/",
       httpOnly: true,
       sameSite: "strict",
@@ -146,9 +147,9 @@ export const signUp = async ({ email, password, firstName, lastName }: SignUpPro
     }
     return { success: false, error: 'An unexpected error occurred' };
   }
-};
+}
 
-export const signIn = async ({ email, password }: SignInProps) => {
+export async function signIn({ email, password }: SignInProps) {
   try {
     console.log(`Attempting to sign in user: ${email}`);
     const { account } = await createAdminClient();
@@ -156,7 +157,8 @@ export const signIn = async ({ email, password }: SignInProps) => {
     const session = await account.createEmailPasswordSession(email, password);
     console.log('Session created successfully:', session.$id);
 
-    cookies().set("appwrite-session", session.secret, {
+    const cookieStore = cookies();
+    cookieStore.set("appwrite-session", session.secret, {
       path: "/",
       httpOnly: true,
       sameSite: "strict",
@@ -183,27 +185,26 @@ export const signIn = async ({ email, password }: SignInProps) => {
     }
     return { success: false, error: 'An unexpected error occurred' };
   }
-};
+}
 
-export const logoutAccount = async () => {
+export async function logoutAccount() {
   try {
     const { account } = await createSessionClient();
-
-    cookies().delete('appwrite-session');
-
+    const cookieStore = cookies();
+    cookieStore.delete('appwrite-session');
     await account.deleteSession('current');
     return true;
   } catch (error) {
     console.error('Error logging out:', error);
     return false;
   }
-};
+}
 
 export const createLinkToken = async (user: User) => {
   try {
     const request: LinkTokenCreateRequest = {
       user: {
-        client_user_id: user.userId,
+        client_user_id: user.$id,
       },
       client_name: 'Your App Name',
       products: ['auth'],
@@ -224,7 +225,7 @@ export const exchangePublicToken = async ({
   user,
 }: ExchangePublicTokenProps) => {
   try {
-    console.log('Exchanging public token for user:', user.userId);
+    console.log('Exchanging public token for user:', user.$id);
 
     const response = await plaidClient.itemPublicTokenExchange({
       public_token: publicToken,
@@ -273,7 +274,7 @@ export const exchangePublicToken = async ({
       APPWRITE_BANK_COLLECTION_ID!,
       ID.unique(),
       {
-        userId: user.userId,
+        userId: user.$id,
         accessToken: encryptId(accessToken),
         itemId,
         accountId: accountData.account_id,
